@@ -1,0 +1,112 @@
+void * buscarMenor(const void * vec, const void * fin, size_t tam, int (*cmp)(const void*, const void*));
+void intercambiar(void * e1, void * e2, size_t tam);
+
+void* _ordenarSeleccion(void* vec, int ce, unsigned tam, int cmp(const void*, const void*))
+
+    void *menor;
+    void* fin = (char*)vec + (ce - 1) * tam;
+
+    while(vec < fin)
+    {
+        menor = buscarMenor(vec, fin, tam, cmp);
+        if (vec<menor)
+        {
+            intercambiar(vec, menor, tam);
+        }
+        vec = (char*)vec + tam;
+    }
+    return NULL;
+}
+
+int _cmpEmpleadoNombre(const void* a, const void* b){
+    const tEmpleado *emp1 = (const tEmpleado *)a,
+                   *emp2 = (const tEmpleado *)b;
+
+    return _cmp_str(emp1->nomYAp, emp2->nomYAp);
+    //return -1;
+}
+
+int _cmp_enteros(const void* a, const void* b){
+    const int * e1 = (const int *)a;
+    return *e1 - *(const int*)b; // si cambio a *(const int*)b - *e1 ,puedo ordenar de forma descendente
+    //return -1;
+}
+
+int _cmp_str(const void* a, const void* b){
+
+    // <0 si 'a' es menor que 'b'
+    // 0 cero 'a' y 'b' son iguales
+    // >0 si 'a' es mayor 'b'
+
+    const char *s1 = a;
+    const char *s2 = b;
+
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+
+    return *(char*) s1 - *(char*) s2;
+    //return -1;
+}
+
+char* _mstrstr(const char *s1, const char *s2){
+
+    if (*s2 == '\0') {
+        return (char*) s1;
+    }
+
+    while (*s1) {
+        const char *p1 = s1;
+        const char *p2 = s2;
+
+        while (*p1 && *p2 && (*p1 == *p2)) {
+            p1++;
+            p2++;
+        }
+
+        if (*p2 == '\0') {
+            return (char*) s1;  // Se encontró la subcadena en la cadena original
+        }
+
+        s1++;
+    }
+
+    return NULL;
+}
+
+void * buscarMenor(const void * vec, const void * fin, size_t tam, int (*cmp)(const void*, const void*))
+{
+    const void * men = vec;
+    vec = (const char*)vec + tam;
+    while(vec <= fin)
+    {
+        if (cmp(vec, men) < 0) // si Cambio a "cmp(vec, men) > 0" puedo ordenar de forma descendente
+        {
+            men = vec;
+        }
+        vec = (const char*)vec + tam;
+    }
+    return (void *) men;
+}
+
+void mi_memcpy(void* destino, const void* origen, size_t tam) {
+    char* dest = (char*)destino;
+    const char* orig = (const char*)origen;
+
+    for (size_t i = 0; i < tam; i++) {
+        dest[i] = orig[i];
+    }
+}
+
+void intercambiar(void * e1, void * e2, size_t tam)
+{
+    void * aux = malloc(tam);
+    if (!aux) return;
+
+    mi_memcpy(aux, e1, tam);
+    mi_memcpy(e1, e2, tam);
+    mi_memcpy(e2, aux, tam);
+
+    free(aux);
+}
