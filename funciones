@@ -406,3 +406,128 @@ int _sumTrianInfEntreDiag(int mat[][MAX_COL], int filas)
     return suma;
 }
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "../Fecha/Fecha.h"
+#include "../SolucionParcialPlazosFijosTopicos/SolucionParcialPlazosFijos.h"
+
+void procesarPF_ALU(FILE* archivoCuentas, PlazoFijo* vectorPlazoFijo, int ce, Fecha* fechaProceso);
+PlazoFijo* cargarVectorPF_ALU(const char* nombreArchivo, int* ce);
+void mostrarCuentas_ALU(const char* nombreArchivo);
+
+int main(int argc, char* argv[])
+{
+    if (argc != 4)
+    {
+        puts("Cantidad incorrecta de parámetros.");
+        return 1;
+    }
+
+    generarArchivos(argv[1], argv[2]);
+
+    puts("Cuentas antes de actualizar:");
+    mostrarCuentas_ALU(argv[1]);
+
+    FILE* cuentasDat = fopen(argv[1], "r+b");
+    if (!cuentasDat)
+        return 2;
+
+    Fecha fechaProceso;
+    int fechaOk = txtAFecha(argv[3], &fechaProceso);
+    if (!fechaOk)
+        return 3;
+
+    PlazoFijo* plazosFijosVec = NULL;
+    int ce = 0;
+
+    plazosFijosVec = cargarVectorPF_ALU(argv[2], &ce);
+
+    procesarPF_ALU(cuentasDat, plazosFijosVec, ce, &fechaProceso);
+
+    fclose(cuentasDat);
+
+    puts("\nCuentas después de actualizar:");
+    mostrarCuentas_ALU(argv[1]);
+
+    return 0;
+}
+
+void procesarPF_ALU(FILE* archivoCuentas, PlazoFijo* vectorPlazoFijo, int ce, Fecha* fechaProceso)
+{
+    fseek(archivoCuentas, 0, SEEK_SET);
+    int cuentaActual = -1;
+    Cuenta cuenta;
+
+    while (fread(&cuenta, sizeof(Cuenta), 1, archivoCuentas) == 1)
+    {
+        if (cuenta.cuenta != cuentaActual)
+        {
+            cuentaActual = cuenta.cuenta;
+        }
+
+        for (int i = 0; i < ce; i++)
+        {
+            if (cuentaActual == vectorPlazoFijo[i].cuenta)
+            {
+                Fecha fechaVencimiento = sumarDiasAFecha(&vectorPlazoFijo[i].fechaConstitucion, vectorPlazoFijo[i].dias);
+
+                if (cmpFechas(fechaProceso, &fechaVencimiento) >= 0)
+                {
+                    float intereses = vectorPlazoFijo[i].monto * (vectorPlazoFijo[i].dias / 365.0f) * (vectorPlazoFijo[i].interesAnual / 100.0f);
+                    cuenta.saldo += vectorPlazoFijo[i].monto + intereses;
+                    fseek(archivoCuentas, -sizeof(Cuenta), SEEK_CUR);
+                    fwrite(&cuenta, sizeof(Cuenta), 1, archivoCuentas);
+                    fseek(archivoCuentas, 0, SEEK_CUR);
+                }
+            }
+        }
+    }
+}
+
+PlazoFijo* cargarVectorPF_ALU(const char* nombreArchivo, int* ce)
+{
+    FILE* archivoText = fopen(nombreArchivo, "r");
+
+    if (!archivoText)
+    {
+        printf("No se pudo abrir el archivo");
+        return NULL;
+    }
+
+    char linea[256];
+    PlazoFijo* vecPlazoFijo = NULL;
+
+    while (fgets(linea, sizeof(linea), archivoText))
+    {
+        PlazoFijo plazoFijo;
+        sscanf(linea, "%d|%d|%f|%f|%d/%d/%d|%d", &plazoFijo.nroPF, &plazoFijo.cuenta, &plazoFijo.monto, &plazoFijo.interesAnual, &plazoFijo.fechaConstitucion.dia, &plazoFijo.fechaConstitucion.mes, &plazoFijo.fechaConstitucion.anio, &plazoFijo.dias);
+        (*ce)++;
+        vecPlazoFijo = realloc(vecPlazoFijo, (*ce) * sizeof(PlazoFijo));
+        vecPlazoFijo[(*ce) - 1] = plazoFijo;
+    }
+
+    fclose(archivoText);
+    return vecPlazoFijo;
+}
+
+void mostrarCuentas_ALU(const char* nombreArchivo)
+{
+    FILE* archivo = fopen(nombreArchivo, "rb");
+
+    if (!archivo)
+    {
+        printf("No se pudo abrir el archivo");
+        return;
+    }
+
+    Cuenta cuenta;
+
+    while (fread(&cuenta, sizeof(Cuenta), 1, archivo) == 1)
+    {
+        printf("CUENTA: %d - CLIENTE: %s - SALDO: $ %.2f\n", cuenta.cuenta, cuenta.cliente, cuenta.saldo);
+    }
+
+    fclose(archivo);
+}
+
